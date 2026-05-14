@@ -129,10 +129,10 @@ router.get('/', authenticate, async (req, res) => {
     // Fetch one extra to know if there's a next page
     const result = await db.query(
       `SELECT
-         c.id, c.title, c.category_id, c.subcategory, c.status,
-         c.lat, c.lng, c.image_url, c.cost_to_resolve,
-         c.submitted_at, c.created_at,
-         u.full_name AS submitted_by
+        c.id, c.title, c.description, c.category_id, c.subcategory, c.status,
+        c.lat, c.lng, c.image_url, c.cost_to_resolve,
+        c.submitted_at, c.created_at,
+        u.full_name AS submitted_by
        FROM complaints c
        JOIN users u ON u.id = c.user_id
        ${where}
