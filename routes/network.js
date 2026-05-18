@@ -4,16 +4,7 @@ const { Pool }   = require('pg');
 const { authenticate } = require('../middleware/auth'); // existing middleware
 
 const router = express.Router();
-
-// Re-use the existing pool from the parent app (passed via app.locals)
-// OR require it directly if your project exports it from db/pool.js
-const pool = new Pool({
-  host:     process.env.DB_HOST     || 'localhost',
-  port:     parseInt(process.env.DB_PORT || '5432'),
-  database: process.env.DB_NAME,
-  user:     process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-});
+const db = require('../db');
 
 // ─── POST /api/complaints/network ────────────────────────────────────────────
 
@@ -46,7 +37,7 @@ router.post('/network', authenticate, networkValidators, async (req, res) => {
     device_model, os_version, platform,
   } = req.body;
 
-  const client = await pool.connect();
+  const client = await db.pool.connect();
   try {
     await client.query('BEGIN');
 
@@ -114,7 +105,7 @@ router.get('/:id/network-diagnostics', authenticate, async (req, res) => {
 
   try {
     // Verify the complaint belongs to this user (or user is admin/officer)
-    const compRes = await pool.query(
+    const compRes = await db.query(
       'SELECT user_id, category_id FROM complaints WHERE id = $1', [id]
     );
     if (compRes.rows.length === 0) return res.status(404).json({ error: 'Not found' });
@@ -128,7 +119,7 @@ router.get('/:id/network-diagnostics', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Not a network complaint' });
     }
 
-    const diagRes = await pool.query(
+    const diagRes = await db.query(
       'SELECT * FROM network_complaints WHERE complaint_id = $1 ORDER BY id DESC LIMIT 1', [id]
     );
     if (diagRes.rows.length === 0) return res.status(404).json({ error: 'Diagnostics not found' });
