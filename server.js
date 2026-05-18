@@ -106,6 +106,7 @@ if (process.env.NODE_ENV !== 'production') {
 // ═══════════════════════════════════════════════════════════════════════════
 
 app.use('/api/auth',       require('./routes/auth'));
+app.use('/api/complaints', require('./routes/network'));
 app.use('/api/complaints', require('./routes/complaints'));
 
 // Health check — unauthenticated, for uptime monitors
@@ -155,4 +156,3 @@ app.listen(PORT, () => {
   console.log(`    Health:      http://localhost:${PORT}/health\n`);
 });
 
-app.use('/api/complaints', networkRoutes);
