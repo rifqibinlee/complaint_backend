@@ -18,6 +18,7 @@ const helmet     = require('helmet');
 const cors       = require('cors');
 const rateLimit  = require('express-rate-limit');
 const path       = require('path');
+const networkRoutes = require('./routes/network');
 
 // ── Validate required environment variables before anything else ─────────────
 const REQUIRED_ENV = ['DATABASE_URL', 'JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET'];
@@ -153,3 +154,5 @@ app.listen(PORT, () => {
   console.log(`    Environment: ${process.env.NODE_ENV ?? 'development'}`);
   console.log(`    Health:      http://localhost:${PORT}/health\n`);
 });
+
+app.use('/api/complaints', networkRoutes);
