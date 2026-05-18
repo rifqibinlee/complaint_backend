@@ -108,7 +108,6 @@ if (process.env.NODE_ENV !== 'production') {
 app.use('/api/auth',       require('./routes/auth'));
 app.use('/api/officer', require('./routes/routes_officer'));
 app.use('/api/admin',   require('./routes/routes_admin'));
-app.use('/api/complaints', require('./routes/network'));
 app.use('/api/complaints', require('./routes/complaints'));
 
 // Health check — unauthenticated, for uptime monitors
