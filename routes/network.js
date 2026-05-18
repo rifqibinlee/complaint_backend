@@ -1,7 +1,7 @@
 const express    = require('express');
 const { body, validationResult } = require('express-validator');
 const { Pool }   = require('pg');
-const { authenticate } = require('../middleware/auth'); // existing middleware
+const { authenticate } = require('../middleware/authenticate.js'); // existing middleware
 
 const router = express.Router();
 const db = require('../db');
