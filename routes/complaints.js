@@ -16,31 +16,22 @@ const db       = require('../db');
 const { authenticate, requireRole } = require('../middleware/authenticate');
 const { audit } = require('../services/auditService');
 
-// ─── File upload setup (local disk for now) ────────────────────────────────
+// ─── File upload setup ────────────────────────────────────────────────────
 
+const s3 = require('../services/s3');
+
+// Local disk fallback (used when S3_BUCKET is not set)
 const UPLOAD_DIR = process.env.UPLOAD_DIR ?? './uploads';
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOAD_DIR),
-  filename:    (req, file, cb) => {
-    const ext  = path.extname(file.originalname).toLowerCase();
-    const name = `complaint_${Date.now()}_${Math.random().toString(36).slice(2)}${ext}`;
-    cb(null, name);
-  },
-});
-
+// Always use memory storage — we decide upload destination in the route handler
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: (parseInt(process.env.MAX_FILE_SIZE_MB ?? '5', 10)) * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowed = ['.jpg', '.jpeg', '.png', '.webp'];
     const ext     = path.extname(file.originalname).toLowerCase();
-    if (allowed.includes(ext)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only JPG, PNG and WEBP images are allowed'));
-    }
+    allowed.includes(ext) ? cb(null, true) : cb(new Error('Only JPG, PNG and WEBP images are allowed'));
   },
 });
 
@@ -129,10 +120,10 @@ router.get('/', authenticate, async (req, res) => {
     // Fetch one extra to know if there's a next page
     const result = await db.query(
       `SELECT
-        c.id, c.title, c.description, c.category_id, c.subcategory, c.status,
-        c.lat, c.lng, c.image_url, c.cost_to_resolve,
-        c.submitted_at, c.created_at,
-        u.full_name AS submitted_by
+         c.id, c.title, c.category_id, c.subcategory, c.status,
+         c.lat, c.lng, c.image_url, c.cost_to_resolve,
+         c.submitted_at, c.created_at,
+         u.full_name AS submitted_by
        FROM complaints c
        JOIN users u ON u.id = c.user_id
        ${where}
@@ -219,7 +210,19 @@ router.post(
     }
 
     const { title, description, category_id, subcategory, lat, lng } = req.body;
-    const imageUrl   = req.file ? `/uploads/${req.file.filename}` : null;
+    let imageUrl = null;
+    if (req.file) {
+      if (s3.isS3Enabled()) {
+        imageUrl = await s3.uploadFile(req.file.buffer, req.file.originalname, req.file.mimetype);
+      } else {
+        // Local disk fallback
+        const ext      = path.extname(req.file.originalname).toLowerCase();
+        const filename = `complaint_${Date.now()}_${Math.random().toString(36).slice(2)}${ext}`;
+        const filepath = path.join(UPLOAD_DIR, filename);
+        fs.writeFileSync(filepath, req.file.buffer);
+        imageUrl = `/uploads/${filename}`;
+      }
+    }
     const status     = getInitialStatus(category_id);
     const cost       = DEFAULT_COSTS[subcategory] ?? null;
 
